@@ -1,0 +1,12 @@
+[
+  {
+    "cmd": "node design-token-gate.mjs --tokens demo/tokens.css --scope demo/src --baseline demo/baseline.json",
+    "out": "design-token-gate: 3 violation(s) - demo/tokens.css owns the tokens and ladders:\n  src/card.css:2 raw #1a1a2e -> use var(--color-ink)\n  src/card.css:5 off-ladder border-radius 6px -> use var(--radius-card) (ladder: 8)\n  src/card.css:4 raw shadow color -> use var(--shadow-card)\n\nGrandfathered debt is frozen in baseline.json - that list only shrinks.",
+    "status": 1
+  },
+  {
+    "cmd": "node design-token-gate.mjs --tokens demo/tokens.css --scope demo/clean-src --baseline demo/baseline.json",
+    "out": "design-token-gate: clean - every token value flows from demo/tokens.css (0 grandfathered violation(s) still owed).",
+    "status": 0
+  }
+]
