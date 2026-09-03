@@ -1,0 +1,16 @@
+{
+  "name": "design-token-gate",
+  "version": "1.0.0",
+  "description": "A design-token drift gate: ladders read from your tokens file at runtime, a shrink-only baseline for old debt.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "files": [
+    "design-token-gate.mjs"
+  ]
+}

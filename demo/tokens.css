@@ -1,0 +1,8 @@
+:root {
+  --color-ink: #1a1a2e;
+  --color-accent: #e94560;
+  --text-sm: 14px;
+  --text-lg: 20px;
+  --radius-card: 8px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
