@@ -70,31 +70,50 @@ const unescapeXml = (s) =>
   s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
 
 // Session rows only: the one <text> carrying its own font-size is the title
-// in the window chrome, not something a command printed.
+// in the window chrome, not something a command printed. A command row holds
+// the prompt tspan, a wrapped command continues on a row of its own indented
+// four spaces, and everything else is output.
 function pictureRows(svg) {
   const rows = [];
   for (const m of svg.matchAll(/<text\b([^>]*)>([\s\S]*?)<\/text>/g)) {
     if (/font-size=/.test(m[1])) continue;
-    const inner = m[2].replace(/<tspan class="p"[^>]*>\$<\/tspan>/, "");
-    rows.push(unescapeXml(inner.replace(/<[^>]+>/g, "")));
+    const prompted = /<tspan class="p"[^>]*>\$<\/tspan>/.test(m[2]);
+    const text = unescapeXml(m[2].replace(/<tspan class="p"[^>]*>\$<\/tspan>/, "").replace(/<[^>]+>/g, ""));
+    if (prompted) rows.push({ kind: "cmd", text });
+    else if (/class="cmd"/.test(m[1])) rows.push({ kind: "cont", text: text.replace(/^ {4}/, "") });
+    else rows.push({ kind: "out", text });
   }
   return rows;
 }
 
-test("every row of demo/terminal.svg traces back to the transcript", () => {
+// Undo the drawing's wrapping instead of re-deriving where it falls: a wrapped
+// row ends in " \" and the chunks rejoin with the one space the break ate.
+const rejoin = (chunks) => chunks.map((c) => (c.endsWith(" \\") ? c.slice(0, -2) : c)).join(" ");
+
+const shownWhole = (row, line) =>
+  row === line ||
+  (row.endsWith("…") && row.split("…").length === 2 && line.startsWith(row.slice(0, -1)) && row.length - 1 < line.length);
+
+test("the picture shows whole entries, with no row missing, added or reordered", () => {
   const rows = pictureRows(fs.readFileSync(PICTURE, "utf8"));
   assert.ok(rows.length > 0, "found no text rows in the picture");
 
-  const outLines = entries.flatMap((e) => e.out.split("\n"));
-  const cmds = entries.map((e) => e.cmd);
+  let i = 0;
+  for (const entry of entries) {
+    if (i === rows.length) break; // the picture holds whole entries, then stops
+    assert.equal(rows[i].kind, "cmd", `row ${i + 1} should start the command ${entry.cmd}`);
+    const chunks = [rows[i].text];
+    i += 1;
+    while (i < rows.length && rows[i].kind === "cont") chunks.push(rows[i++].text);
+    assert.equal(rejoin(chunks), entry.cmd, `rows ${i} of the picture do not rebuild the command`);
 
-  for (const row of rows) {
-    // One trailing ellipsis means the renderer clipped the line. A wrapped
-    // command row ends in " \" and its continuation is indented four spaces.
-    const text = row.replace(/…$/, "").replace(/ \\$/, "").replace(/^ {4}/, "");
-    if (!text.trim()) continue;
-    const fromOutput = outLines.some((line) => line.startsWith(text));
-    const fromCommand = cmds.some((cmd) => cmd.includes(text));
-    assert.ok(fromOutput || fromCommand, `picture row is in no transcript entry: ${JSON.stringify(row)}`);
+    for (const line of entry.out.split("\n").filter((l) => l.trim())) {
+      assert.ok(i < rows.length, `the picture stops inside ${entry.cmd}, before its line ${JSON.stringify(line)}`);
+      assert.equal(rows[i].kind, "out", `row ${i + 1} should be the output line ${JSON.stringify(line)}`);
+      assert.ok(shownWhole(rows[i].text, line),
+        `row ${i + 1} is ${JSON.stringify(rows[i].text)}, expected ${JSON.stringify(line)} whole or end-trimmed with one ellipsis`);
+      i += 1;
+    }
   }
+  assert.equal(i, rows.length, `the picture draws ${rows.length - i} row(s) the transcript does not account for`);
 });
