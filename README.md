@@ -122,6 +122,10 @@ which is the shape of change a reviewer should ask about in a diff.
 - Static analysis only, over CSS files and inline `style={{ }}` objects in
   JS/TS/JSX/TSX. Nothing is rendered, no computed styles, no CSS-in-JS
   template literals, no Sass or Less variables.
+- The walker never descends into `node_modules`, `.git`, `dist`, `build`,
+  `coverage`, or `.next`, so pointing `--scope` at a project root grades
+  your source and not your dependencies or your build output. That list is
+  fixed and there is no flag to change it.
 - Which custom properties feed which ladder is decided by the property
   name in your tokens file: `text` or `font` for the font-size ladder,
   `radius` or `corner` for the radius ladder, `shadow` or `elev` for shadow
