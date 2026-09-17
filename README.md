@@ -89,7 +89,12 @@ Exit code 0.
 ```
 
 Any exit code other than 0 fails the step, so a hand-typed value in a pull
-request blocks the merge the same way a failing test would.
+request blocks the merge the same way a failing test would. The two
+non-zero codes are worth telling apart in a script: 1 means the gate ran
+and found drift, 2 means the gate could not run at all (a missing tokens
+file or scope directory, an unknown flag, a missing baseline). A step that
+inverts the command and accepts any non-zero code reads a typo in a path
+as a caught violation; check for exit 1 on purpose instead.
 
 ## How the baseline works
 

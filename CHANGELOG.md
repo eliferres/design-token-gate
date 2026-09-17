@@ -8,6 +8,13 @@
   (or `npx github:eliferres/design-token-gate`) puts `design-token-gate` on your
   PATH, and `design-token-gate --version` prints the version.
 
+### Changed
+
+- Exit 2 now means the gate could not run: a missing tokens file or scope
+  directory, an unknown flag, a tokens file with no ladder in it, or a missing
+  baseline without `--freeze`. Exit 1 still means the gate ran and found a
+  violation, exit 0 still means clean, so a script can tell drift from a typo.
+
 ### Fixed
 
 - The demo picture no longer cuts its long lines off at the right edge: rows
