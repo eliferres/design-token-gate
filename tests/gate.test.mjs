@@ -30,7 +30,7 @@ const TOKENS = `:root {
 }
 `;
 
-function makeTree({ css = "", tsx = null, baseline = { counts: {} } }) {
+function makeTree({ css = "", tsx = null, baseline = { counts: {} }, extra = {} }) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "design-token-gate-"));
   const write = (rel, body) => {
     const p = path.join(root, rel);
@@ -41,6 +41,7 @@ function makeTree({ css = "", tsx = null, baseline = { counts: {} } }) {
   write("src/probe.css", css);
   if (tsx !== null) write("src/Probe.tsx", tsx);
   if (baseline !== null) write("baseline.json", JSON.stringify(baseline, null, 2));
+  for (const [rel, body] of Object.entries(extra)) write(rel, body);
   return root;
 }
 
@@ -276,6 +277,31 @@ test("a DIFFERENT off-ladder value in a grandfathered file still fails", () => {
 test("a px fallback inside var() is legal for font-size and radius", () => {
   const root = makeTree({ css: `.a { font-size: var(--text-sm, 13px); border-radius: var(--radius-card, 10px); }\n` });
   assert.equal(runGate(root).code, 0);
+});
+
+test("a raw token hex under node_modules is skipped but the same hex beside it is not", () => {
+  const vendored = makeTree({
+    css: `.a { color: red; }\n`,
+    extra: { "src/node_modules/pkg/vendor.css": `.v { color: #1a1a2e; }\n` },
+  });
+  assert.equal(runGate(vendored).code, 0);
+
+  const ours = makeTree({
+    css: `.a { color: red; }\n`,
+    extra: { "src/pkg/vendor.css": `.v { color: #1a1a2e; }\n` },
+  });
+  const { code, out } = runGate(ours);
+  assert.equal(code, 1);
+  assert.match(out, /raw #1a1a2e -> use var\(--color-ink\)/);
+});
+
+test("every skipped directory name is skipped, and a FILE with that name is still scanned", () => {
+  for (const dir of ["node_modules", ".git", "dist", "build", "coverage", ".next"]) {
+    const root = makeTree({ css: "", extra: { [`src/${dir}/vendor.css`]: `.v { color: #1a1a2e; }\n` } });
+    assert.equal(runGate(root).code, 0, `${dir} should not be scanned`);
+  }
+  const file = makeTree({ css: "", extra: { "src/build.css": `.v { color: #1a1a2e; }\n` } });
+  assert.equal(runGate(file).code, 1, "build.css is a source file, not a build directory");
 });
 
 test("missing --tokens or --scope prints usage and exits 1", () => {

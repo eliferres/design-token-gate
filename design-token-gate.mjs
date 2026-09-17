@@ -144,12 +144,19 @@ function nearest(ladder, px) {
   return best; // [px, tokenName]
 }
 
+// Dependencies and build output are not yours to fix: pointing --scope at a
+// project root and getting a report on vendored CSS is how the gate gets
+// switched off. A directory named on this list is never descended into.
+const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", ".next"]);
+
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     const st = statSync(p);
-    if (st.isDirectory()) yield* walk(p);
-    else if (/\.(tsx?|jsx?|css)$/.test(name)) yield p;
+    if (st.isDirectory()) {
+      if (SKIP_DIRS.has(name)) continue;
+      yield* walk(p);
+    } else if (/\.(tsx?|jsx?|css)$/.test(name)) yield p;
   }
 }
 
