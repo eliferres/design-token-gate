@@ -220,19 +220,19 @@ test("--freeze refuses to raise a hex count without --allow-increase", () => {
   assert.equal(written.counts[PROBE_CSS]["#1a1a2e"], 2);
 });
 
-test("a missing baseline fails loudly unless --freeze is given", () => {
+test("a missing baseline exits 2, not 1, unless --freeze is given", () => {
   const root = makeTree({ css: `.a { color: red; }\n`, baseline: null });
   const { code, out } = runGate(root);
-  assert.equal(code, 1);
+  assert.equal(code, 2);
   assert.match(out, /baseline\.json is missing/);
   assert.equal(runGate(root, "--freeze").code, 0);
 });
 
-test("a tokens file missing a ladder refuses to run half-blind", () => {
+test("a tokens file missing a ladder refuses to run half-blind, exit 2", () => {
   const root = makeTree({ css: `.a { font-size: 13px; }\n` });
   fs.writeFileSync(path.join(root, "tokens.css"), ":root { --color-ink: #1a1a2e; }\n");
   const { code, out } = runGate(root);
-  assert.equal(code, 1);
+  assert.equal(code, 2);
   assert.match(out, /refusing to run half-blind/);
 });
 
@@ -304,8 +304,44 @@ test("every skipped directory name is skipped, and a FILE with that name is stil
   assert.equal(runGate(file).code, 1, "build.css is a source file, not a build directory");
 });
 
-test("missing --tokens or --scope prints usage and exits 1", () => {
+test("missing --tokens or --scope prints usage and exits 2", () => {
   const r = spawnSync(process.execPath, [GATE, "--tokens", "tokens.css"], { encoding: "utf8" });
-  assert.equal(r.status, 1);
+  assert.equal(r.status, 2);
   assert.match(r.stdout + r.stderr, /usage:/);
+});
+
+// The three codes are the whole contract a CI step relies on: a caller that
+// reads "non-zero" as "drift found" must not be handed a crash instead.
+test("exit 0 is clean, exit 1 is a violation, exit 2 is a gate that could not run", () => {
+  const clean = makeTree({ css: `.a { color: var(--color-ink); }\n` });
+  assert.equal(runGate(clean).code, 0);
+
+  const violating = makeTree({ css: `.a { color: #1a1a2e; }\n` });
+  assert.equal(runGate(violating).code, 1);
+
+  const root = makeTree({ css: `.a { color: #1a1a2e; }\n` });
+  const at = (...flags) => spawnSync(process.execPath, [GATE, ...flags], { encoding: "utf8" });
+  const tokens = path.join(root, "tokens.css");
+  const scope = path.join(root, "src");
+  const baseline = path.join(root, "baseline.json");
+
+  const missingScope = at("--tokens", tokens, "--scope", path.join(root, "srcc"), "--baseline", baseline);
+  assert.equal(missingScope.status, 2, "a typo'd scope directory is not a violation");
+  assert.match(missingScope.stderr, /scope directory not found/);
+
+  const missingTokens = at("--tokens", path.join(root, "tokns.css"), "--scope", scope, "--baseline", baseline);
+  assert.equal(missingTokens.status, 2);
+  assert.match(missingTokens.stderr, /tokens file not found/);
+
+  const unknownFlag = at("--tokens", tokens, "--scope", scope, "--baseline", baseline, "--strict");
+  assert.equal(unknownFlag.status, 2);
+  assert.match(unknownFlag.stderr, /unrecognized argument "--strict"/);
+});
+
+test("--freeze refusing to raise the ceiling stays exit 1: the gate ran and said no", () => {
+  const root = makeTree({
+    css: `.a { font-size: 13px; }\n.b { font-size: 13px; }\n`,
+    baseline: { counts: { [PROBE_CSS]: { "font-size:13px": 1 } } },
+  });
+  assert.equal(runGate(root, "--freeze").code, 1);
 });

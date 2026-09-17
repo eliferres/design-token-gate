@@ -42,7 +42,12 @@
  * Usage:
  *   design-token-gate --tokens tokens.css --scope src [--baseline baseline.json] [--freeze] [--allow-increase]
  *
- * Exit 1 on any violation not covered by the baseline. Exit 0 otherwise.
+ * Exit 0 clean. Exit 1 on a violation not covered by the baseline, and on a
+ * --freeze that would raise the ceiling: the gate ran and says no. Exit 2
+ * when the gate could not run at all - bad arguments, a missing tokens file
+ * or scope directory, a tokens file with no ladder to read, a missing
+ * baseline without --freeze. A caller that treats "non-zero" as "drift
+ * found" would otherwise read a typo in a path as a passing check.
  * Zero dependencies, Node 18+, ESM.
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
@@ -72,7 +77,7 @@ function parseArgs(argv) {
       process.exit(0);
     } else {
       console.error(`design-token-gate: unrecognized argument "${a}"`);
-      process.exit(1);
+      process.exit(2);
     }
   }
   return out;
@@ -81,7 +86,7 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 if (!args.tokens || !args.scope) {
   console.error(`usage: ${INVOCATION} --tokens tokens.css --scope src [--baseline baseline.json] [--freeze] [--allow-increase]`);
-  process.exit(1);
+  process.exit(2);
 }
 
 const TOKENS_FILE = resolve(args.tokens);
@@ -95,11 +100,11 @@ const relPath = (file) => relative(ANCHOR, file);
 
 if (!existsSync(TOKENS_FILE)) {
   console.error(`design-token-gate: tokens file not found at ${args.tokens}`);
-  process.exit(1);
+  process.exit(2);
 }
 if (!existsSync(SCOPE_DIR)) {
   console.error(`design-token-gate: scope directory not found at ${args.scope}`);
-  process.exit(1);
+  process.exit(2);
 }
 
 const tokensSrc = readFileSync(TOKENS_FILE, "utf8");
@@ -133,7 +138,7 @@ if (!FONT_LADDER.size || !RADIUS_LADDER.size || !SHADOW_TOKENS.length) {
     `${args.tokens} - refusing to run half-blind. Name font tokens with "text" or "font", radius ` +
     'tokens with "radius" or "corner", and shadow tokens with "shadow" or "elev".'
   );
-  process.exit(1);
+  process.exit(2);
 }
 
 function nearest(ladder, px) {
@@ -267,7 +272,7 @@ try {
   baselineExists = false;
   if (!args.freeze) {
     console.error(`design-token-gate: ${relPath(BASELINE_FILE)} is missing or unreadable - run with --freeze to create it.`);
-    process.exit(1);
+    process.exit(2);
   }
 }
 const baseCounts = baseline.counts ?? {};
