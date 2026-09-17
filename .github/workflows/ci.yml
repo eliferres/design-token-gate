@@ -23,3 +23,9 @@ jobs:
         run: |
           node design-token-gate.mjs --tokens demo/tokens.css --scope demo/clean-src --baseline demo/baseline.json
           ! node design-token-gate.mjs --tokens demo/tokens.css --scope demo/src --baseline demo/baseline.json
+      - name: Install the packed tarball and run the installed command
+        run: |
+          npm pack
+          npm install --global ./design-token-gate-*.tgz
+          design-token-gate --version
+          design-token-gate --tokens demo/tokens.css --scope demo/clean-src --baseline demo/baseline.json

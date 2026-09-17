@@ -4,6 +4,9 @@
   "description": "A design-token drift gate: ladders read from your tokens file at runtime, a shrink-only baseline for old debt.",
   "type": "module",
   "license": "MIT",
+  "bin": {
+    "design-token-gate": "design-token-gate.mjs"
+  },
   "engines": {
     "node": ">=18"
   },

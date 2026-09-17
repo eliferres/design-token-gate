@@ -40,13 +40,23 @@
  * the debt only shrinks.
  *
  * Usage:
- *   node design-token-gate.mjs --tokens tokens.css --scope src [--baseline baseline.json] [--freeze] [--allow-increase]
+ *   design-token-gate --tokens tokens.css --scope src [--baseline baseline.json] [--freeze] [--allow-increase]
  *
  * Exit 1 on any violation not covered by the baseline. Exit 0 otherwise.
  * Zero dependencies, Node 18+, ESM.
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
-import { resolve, relative, join } from "node:path";
+import { resolve, relative, join, basename } from "node:path";
+
+// Usage text names the gate the way it was actually invoked: the installed
+// command by its own name, a checkout run as "node design-token-gate.mjs".
+const invokedAs = basename(process.argv[1] ?? "design-token-gate");
+const INVOCATION = invokedAs.endsWith(".mjs") ? `node ${invokedAs}` : invokedAs;
+
+function version() {
+  const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+  return pkg.version;
+}
 
 function parseArgs(argv) {
   const out = { freeze: false, allowIncrease: false };
@@ -57,7 +67,10 @@ function parseArgs(argv) {
     else if (a === "--baseline") out.baseline = argv[++i];
     else if (a === "--freeze") out.freeze = true;
     else if (a === "--allow-increase") out.allowIncrease = true;
-    else {
+    else if (a === "--version") {
+      console.log(`design-token-gate ${version()}`);
+      process.exit(0);
+    } else {
       console.error(`design-token-gate: unrecognized argument "${a}"`);
       process.exit(1);
     }
@@ -67,7 +80,7 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.tokens || !args.scope) {
-  console.error("usage: node design-token-gate.mjs --tokens tokens.css --scope src [--baseline baseline.json] [--freeze] [--allow-increase]");
+  console.error(`usage: ${INVOCATION} --tokens tokens.css --scope src [--baseline baseline.json] [--freeze] [--allow-increase]`);
   process.exit(1);
 }
 
