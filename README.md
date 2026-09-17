@@ -8,6 +8,24 @@ Every shipped screen draws its colors, type sizes, corners, and shadows from one
 
 ## Quick start
 
+Install the command:
+
+```bash
+npm install --global github:eliferres/design-token-gate
+```
+
+Or run it without installing anything:
+
+```bash
+npx github:eliferres/design-token-gate --tokens src/tokens.css --scope src --baseline design-token-baseline.json
+```
+
+Either way the installed command is `design-token-gate`, and
+`design-token-gate --version` prints the version. The tool is not published
+to the npm registry; both forms install straight from the GitHub repo.
+
+To run the demo below, clone the repo instead:
+
 ```bash
 git clone https://github.com/eliferres/design-token-gate.git
 cd design-token-gate
