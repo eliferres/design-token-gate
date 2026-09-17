@@ -10,8 +10,11 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const GATE = path.resolve("design-token-gate.mjs");
+// Resolved from this file, not from the working directory, so the suite runs
+// the same wherever it is invoked from.
+const GATE = fileURLToPath(new URL("../design-token-gate.mjs", import.meta.url));
 
 // A miniature tokens file carrying the hex map, both ladders, and a shadow token.
 const TOKENS = `:root {
