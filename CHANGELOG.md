@@ -10,6 +10,9 @@
 
 ### Fixed
 
+- The demo picture no longer cuts its long lines off at the right edge: rows
+  wider than the box ran past it mid-word with no ellipsis. Only the drawing
+  changed; the recorded session is untouched.
 - `--scope` pointed at a project root no longer reports violations in vendored
   or generated code: `node_modules`, `.git`, `dist`, `build`, `coverage` and
   `.next` are never scanned.
