@@ -19,6 +19,9 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Run tests
         run: node --test tests/*.test.mjs
+      - name: Run tests from outside the repo directory
+        run: node --test "$GITHUB_WORKSPACE"/tests/*.test.mjs
+        working-directory: /
       - name: Grade the demo source against demo/tokens.css
         run: |
           node design-token-gate.mjs --tokens demo/tokens.css --scope demo/clean-src --baseline demo/baseline.json
