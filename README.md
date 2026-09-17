@@ -6,7 +6,7 @@ Every shipped screen draws its colors, type sizes, corners, and shadows from one
 
 <img src="demo/terminal.svg" width="660" alt="Terminal session showing design-token-gate refusing a source file with a raw hex, an off-ladder radius, and a raw shadow color, then passing the same file rewritten to use var().">
 
-## Quick start
+## Install
 
 Install the command:
 
@@ -39,7 +39,7 @@ holds six tokens: two colors, two font sizes, one radius, one shadow.
 radius wrong; `demo/clean-src/card.css` is the same rule written with
 `var()`.
 
-## The walkthrough
+## Walkthrough
 
 Run the gate against the hand-typed file:
 
@@ -151,6 +151,4 @@ once. This is the generalized, standalone version of the gate that came
 out of fixing that: no company names, no fixed directory layout, just a
 tokens file and a directory to scan.
 
-## License
-
-MIT
+MIT licensed. See LICENSE.
