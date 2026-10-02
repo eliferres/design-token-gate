@@ -289,12 +289,37 @@ function scanBreakpoints(src, add) {
   }
 }
 
+// ── The vouch comment. Some hand-typed values are right: a third-party
+// widget's frame, a print stylesheet, an email template. A comment on the
+// same line, /* token-vouch: <reason> */ (or // in a script), accepts every
+// value on that line. The reason is required and every vouch is printed with
+// it, so an exception is a visible, reviewable line in the diff and the
+// report rather than a hole. Vouched values never reach the baseline.
+const VOUCH = /(?:\/\*|\/\/)\s*token-vouch:(.*?)(?:\*\/|$)/;
+const vouched = [];
+
+function vouchesIn(raw) {
+  const byLine = new Map(); // line number -> reason ("" when none was given)
+  raw.split("\n").forEach((line, i) => {
+    const m = line.match(VOUCH);
+    if (m) byLine.set(i + 1, m[1].trim());
+  });
+  return byLine;
+}
+
 function scanFile(file) {
   const rel = relPath(file);
   const isCss = file.endsWith(".css");
-  const src = blankComments(readFileSync(file, "utf8"), isCss);
+  const raw = readFileSync(file, "utf8");
+  const vouchByLine = vouchesIn(raw);
+  const src = blankComments(raw, isCss);
   const found = [];
-  const add = (key, line, message) => found.push({ file: rel, key, line, message });
+  const add = (key, line, message) => {
+    const reason = vouchByLine.get(line);
+    if (reason) vouched.push({ file: rel, line, message, reason });
+    else if (reason === "") found.push({ file: rel, key, line, message: `${message} (the token-vouch on this line gives no reason, so it vouches for nothing)` });
+    else found.push({ file: rel, key, line, message });
+  };
 
   // ── Rule 1: raw hex that names a token. Keyed by the raw hex string, the
   // same shape rule 2's ladder hits use, so both fold into one baseline. ──
@@ -453,6 +478,11 @@ for (const [file, keys] of Object.entries(currentCounts)) {
   }
 }
 
+if (vouched.length) {
+  console.log(`design-token-gate: ${vouched.length} hand-typed value(s) vouched for:`);
+  for (const v of vouched) console.log(`  vouched: ${v.file}:${v.line} ${v.message} - ${v.reason}`);
+}
+
 if (overflow.length) {
   console.error(`design-token-gate: ${overflow.length} violation(s) - ${args.tokens} owns the tokens and ladders:`);
   for (const o of overflow) console.error("  " + o);
@@ -461,4 +491,5 @@ if (overflow.length) {
 }
 
 const grandfathered = Object.values(baseCounts).reduce((sum, keys) => sum + Object.values(keys).reduce((a, b) => a + b, 0), 0);
-console.log(`design-token-gate: clean - every token value flows from ${args.tokens} (${grandfathered} grandfathered violation(s) still owed).`);
+const vouchNote = vouched.length ? `, ${vouched.length} hand-typed value(s) vouched for` : "";
+console.log(`design-token-gate: clean - every token value flows from ${args.tokens} (${grandfathered} grandfathered violation(s) still owed${vouchNote}).`);

@@ -105,6 +105,30 @@ systems stop at color and type, and a tokens file with no spacing tokens
 gets no spacing check rather than a refusal to run. Their findings join
 the same baseline, keyed by property and value (`"padding:13px"`).
 
+## Accepting one value on purpose
+
+Some hand-typed values are right: the frame of a third-party widget, a
+print stylesheet, an email template that cannot load your tokens. Put a
+`token-vouch` comment with a reason on the same line:
+
+```css
+.embed { padding: 13px; } /* token-vouch: matches the payment widget's own frame */
+```
+
+The value passes, and the report says so with the reason attached:
+
+```text
+design-token-gate: 1 hand-typed value(s) vouched for:
+  vouched: src/embed.css:1 off-scale padding 13px -> use var(--space-4) (spacing scale: 4/8/16px) - matches the payment widget's own frame
+design-token-gate: clean - every token value flows from src/tokens.css (0 grandfathered violation(s) still owed, 1 hand-typed value(s) vouched for).
+```
+
+A vouch covers every value on its own line and nothing on the next, so
+keep one declaration per line where you use it. A vouch with no reason
+vouches for nothing, and the violation says why. Vouched values never
+enter the baseline: an exception you wrote down on purpose is not debt.
+In a script file the comment is `// token-vouch: <reason>`.
+
 ## Wiring it into CI
 
 ```json

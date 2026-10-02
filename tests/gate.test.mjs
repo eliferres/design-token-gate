@@ -432,3 +432,45 @@ test("an off-scale spacing value is grandfathered by the baseline like any other
   fs.appendFileSync(path.join(root, "tokens.css"), MORE_TOKENS);
   assert.equal(runGate(root).code, 0);
 });
+
+// ── The vouch comment: one hand-typed value accepted in the open, with a reason ──
+test("a token-vouch comment with a reason accepts the value on its line and is counted", () => {
+  const root = makeTree({ css: `.a { font-size: 13px; } /* token-vouch: matches the embedded widget's own label */\n.b { color: red; }\n` });
+  const { code, out } = runGate(root);
+  assert.equal(code, 0);
+  assert.match(out, /vouched: src\/probe\.css:1 raw font-size 13px .* - matches the embedded widget's own label/);
+  assert.match(out, /1 hand-typed value\(s\) vouched for/);
+});
+
+test("a token-vouch covers only its own line", () => {
+  const root = makeTree({ css: `/* token-vouch: header nudge */\n.a { font-size: 13px; }\n` });
+  const { code, out } = runGate(root);
+  assert.equal(code, 1);
+  assert.match(out, /probe\.css:2 raw font-size 13px/);
+});
+
+test("a token-vouch with no reason vouches for nothing and says so", () => {
+  const root = makeTree({ css: `.a { border-radius: 10px; } /* token-vouch: */\n` });
+  const { code, out } = runGate(root);
+  assert.equal(code, 1);
+  assert.match(out, /off-ladder border-radius 10px .*token-vouch on this line gives no reason/);
+});
+
+test("a // token-vouch works in a script file", () => {
+  const root = makeTree({ css: "", tsx: `export const A = () => <div style={{ fontSize: 13 }} />; // token-vouch: legacy email template\n` });
+  assert.equal(runGate(root).code, 0);
+});
+
+test("--freeze leaves vouched values out of the baseline", () => {
+  const root = makeTree({ css: `.a { font-size: 13px; } /* token-vouch: print stylesheet */\n.b { font-size: 15px; }\n`, baseline: null });
+  assert.equal(runGate(root, "--freeze").code, 0);
+  const written = JSON.parse(fs.readFileSync(path.join(root, "baseline.json"), "utf8"));
+  assert.deepEqual(written.counts[PROBE_CSS], { "font-size:15px": 1 });
+});
+
+test("a clean run with nothing vouched prints no vouch line", () => {
+  const root = makeTree({ css: `.a { font-size: 12px; } /* token-vouch: not needed */\n` });
+  const { code, out } = runGate(root);
+  assert.equal(code, 0);
+  assert.doesNotMatch(out, /vouch/);
+});
