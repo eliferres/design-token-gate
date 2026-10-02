@@ -49,7 +49,8 @@
  * the debt only shrinks.
  *
  * Usage:
- *   design-token-gate --tokens tokens.css --scope src [--baseline baseline.json] [--freeze] [--allow-increase]
+ *   design-token-gate --tokens tokens.css --scope src [--baseline baseline.json]
+ *                     [--allow-file glob]... [--freeze] [--allow-increase]
  *
  * Exit 0 clean. Exit 1 on a violation not covered by the baseline, and on a
  * --freeze that would raise the ceiling: the gate ran and says no. Exit 2
@@ -60,7 +61,7 @@
  * Zero dependencies, Node 18+, ESM.
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
-import { resolve, relative, join, basename } from "node:path";
+import { resolve, relative, join, basename, sep } from "node:path";
 
 // Usage text names the gate the way it was actually invoked: the installed
 // command by its own name, a checkout run as "node design-token-gate.mjs".
@@ -73,7 +74,7 @@ function version() {
 }
 
 function parseArgs(argv) {
-  const out = { freeze: false, allowIncrease: false };
+  const out = { freeze: false, allowIncrease: false, allowFiles: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--tokens") out.tokens = argv[++i];
@@ -81,6 +82,14 @@ function parseArgs(argv) {
     else if (a === "--baseline") out.baseline = argv[++i];
     else if (a === "--freeze") out.freeze = true;
     else if (a === "--allow-increase") out.allowIncrease = true;
+    else if (a === "--allow-file") {
+      const glob = argv[++i];
+      if (!glob) {
+        console.error("design-token-gate: --allow-file needs a glob, such as specimens/** or print.css");
+        process.exit(2);
+      }
+      out.allowFiles.push(glob);
+    }
     else if (a === "--version") {
       console.log(`design-token-gate ${version()}`);
       process.exit(0);
@@ -94,7 +103,7 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.tokens || !args.scope) {
-  console.error(`usage: ${INVOCATION} --tokens tokens.css --scope src [--baseline baseline.json] [--freeze] [--allow-increase]`);
+  console.error(`usage: ${INVOCATION} --tokens tokens.css --scope src [--baseline baseline.json] [--allow-file glob]... [--freeze] [--allow-increase]`);
   process.exit(2);
 }
 
@@ -235,7 +244,48 @@ function* walk(dir) {
   }
 }
 
-const scopedFiles = [...walk(SCOPE_DIR)].filter((f) => f !== TOKENS_FILE);
+// ── Allow-files: a file that prints tokens as specimens (a swatch page,
+// the generated token stylesheet) or one that is not yours (a vendored
+// embed) is skipped whole by --allow-file. A glob with a slash is matched
+// against the path under --scope; one without matches the file name at any
+// depth. A pattern that matches nothing is named, because a typo in an
+// exception should not pass in silence.
+function globToRegExp(glob) {
+  let re = "";
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === "*" && glob[i + 1] === "*") {
+      i++;
+      if (glob[i + 1] === "/") {
+        i++;
+        re += "(?:.*/)?";
+      } else re += ".*";
+    } else if (c === "*") re += "[^/]*";
+    else if (c === "?") re += "[^/]";
+    else re += c.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  }
+  return new RegExp(`^${re}$`);
+}
+
+const allowRules = args.allowFiles.map((glob) => ({ glob, re: globToRegExp(glob), byName: !glob.includes("/"), hits: 0 }));
+function isAllowed(file) {
+  const underScope = relative(SCOPE_DIR, file).split(sep).join("/");
+  let allowed = false;
+  for (const rule of allowRules) {
+    if (rule.re.test(rule.byName ? basename(file) : underScope)) {
+      rule.hits++;
+      allowed = true;
+    }
+  }
+  return allowed;
+}
+
+const walkedFiles = [...walk(SCOPE_DIR)].filter((f) => f !== TOKENS_FILE);
+const scopedFiles = walkedFiles.filter((f) => !isAllowed(f));
+const skippedByAllow = walkedFiles.length - scopedFiles.length;
+for (const rule of allowRules) {
+  if (!rule.hits) console.error(`design-token-gate: --allow-file "${rule.glob}" matched no file under ${args.scope}`);
+}
 
 // ── Scanning: comments are blanked (not deleted) before matching, for both
 // rules, so a commented-out declaration never trips the gate and every line
@@ -478,6 +528,7 @@ for (const [file, keys] of Object.entries(currentCounts)) {
   }
 }
 
+if (skippedByAllow) console.log(`design-token-gate: ${skippedByAllow} file(s) skipped by --allow-file.`);
 if (vouched.length) {
   console.log(`design-token-gate: ${vouched.length} hand-typed value(s) vouched for:`);
   for (const v of vouched) console.log(`  vouched: ${v.file}:${v.line} ${v.message} - ${v.reason}`);

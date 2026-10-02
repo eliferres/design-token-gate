@@ -15,6 +15,9 @@
 - A `/* token-vouch: <reason> */` comment accepts the hand-typed values on its
   own line. Each one is listed in the report with its reason and counted in
   the closing line, and none of them enter the baseline.
+- `--allow-file <glob>`, repeatable, skips whole files such as a token
+  specimen page or a vendored embed. The report counts the skipped files and
+  names any pattern that matched nothing.
 
 ### Changed
 

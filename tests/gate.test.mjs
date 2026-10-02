@@ -474,3 +474,36 @@ test("a clean run with nothing vouched prints no vouch line", () => {
   assert.equal(code, 0);
   assert.doesNotMatch(out, /vouch/);
 });
+
+// ── Allow-files: whole files that are not yours to hold to the tokens ──
+test("--allow-file skips a matching file and reports how many it skipped", () => {
+  const root = makeTree({ css: `.a { color: #1a1a2e; }\n`, extra: { "src/specimens/swatches.css": `.s { color: #1a1a2e; }\n` } });
+  const r = runGate(root, "--allow-file", "probe.css", "--allow-file", "specimens/**");
+  assert.equal(r.code, 0);
+  assert.match(r.out, /2 file\(s\) skipped by --allow-file/);
+});
+
+test("an --allow-file glob with a slash is matched against the path under --scope", () => {
+  const root = makeTree({ css: "", extra: { "src/a/vendor.css": `.v { color: #1a1a2e; }\n`, "src/b/vendor.css": `.v { color: #1a1a2e; }\n` } });
+  const { code, out } = runGate(root, "--allow-file", "a/*.css");
+  assert.equal(code, 1);
+  assert.match(out, /b\/vendor\.css:1 raw #1a1a2e/);
+  assert.doesNotMatch(out, /a\/vendor\.css:1/);
+});
+
+test("a glob without a slash matches the file name at any depth", () => {
+  const root = makeTree({ css: "", extra: { "src/deep/er/print.css": `.p { font-size: 13px; }\n` } });
+  assert.equal(runGate(root, "--allow-file", "print.css").code, 0);
+});
+
+test("an --allow-file pattern that matches nothing is named, and the run still grades", () => {
+  const root = makeTree({ css: `.a { font-size: 13px; }\n` });
+  const { code, out } = runGate(root, "--allow-file", "specimen.css");
+  assert.equal(code, 1);
+  assert.match(out, /--allow-file "specimen\.css" matched no file/);
+});
+
+test("--allow-file with no pattern is a usage error", () => {
+  const root = makeTree({ css: "" });
+  assert.equal(runGate(root, "--allow-file").code, 2);
+});

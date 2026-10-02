@@ -129,6 +129,23 @@ vouches for nothing, and the violation says why. Vouched values never
 enter the baseline: an exception you wrote down on purpose is not debt.
 In a script file the comment is `// token-vouch: <reason>`.
 
+## Skipping whole files
+
+A token specimen page prints your tokens as raw values on purpose, and a
+vendored embed is not yours to fix. Skip them by glob, as many times as
+you need:
+
+```bash
+node design-token-gate.mjs --tokens src/tokens.css --scope src --baseline design-token-baseline.json \
+  --allow-file "specimens/**" --allow-file print.css
+```
+
+A glob with a slash is matched against the path under `--scope`; one
+without a slash matches the file name at any depth. `*` stays inside one
+directory, `**` crosses directories, `?` is one character. The report
+counts the skipped files, and a pattern that matches nothing is named on
+stderr, so a typo in an exception does not pass quietly.
+
 ## Wiring it into CI
 
 ```json
