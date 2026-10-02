@@ -76,6 +76,35 @@ design-token-gate: clean - every token value flows from demo/tokens.css (0 grand
 
 Exit code 0.
 
+## Spacing, borders, durations and breakpoints
+
+Four more ladders switch on when your tokens file declares them, read by
+the same naming rule as the font-size and radius ladders:
+
+| Ladder | Token names containing | Checked in |
+| --- | --- | --- |
+| spacing | `space`, `spacing`, `gap`, `gutter` | `margin`, `padding`, `gap`, `row-gap`, `column-gap` and their side and logical longhands; inline `padding`, `margin`, `gap` |
+| border | `border`, `stroke`, `outline` (never with `radius` or `corner`) | `border`, `border-*-width`, `outline`, `outline-width`, `outline-offset`; inline `borderWidth`, `outlineWidth` |
+| duration | `duration`, `delay` | `transition`, `animation` and their `-duration` and `-delay` longhands, `ms` and `s` compared in milliseconds |
+| breakpoint | `breakpoint`, `screen`, `bp-` | the widths inside `@media` queries |
+
+```text
+src/card.css:7 off-scale padding 13px -> use var(--space-4) (spacing scale: 4/8/16px)
+src/card.css:12 off-scale breakpoint 900px -> nearest token --breakpoint-lg (breakpoint scale: 768/1024px)
+```
+
+Zero passes in any unit, and a negative margin is read as its size, so
+`-8px` is the 8px step. A media query cannot read a custom property, so
+a breakpoint token is honored by typing its value; the gate checks that
+the typed width is one of them, and accepts a `max-width` one step under
+a breakpoint (`767px` or `767.98px` under a 768px token), the usual way
+to end a range without overlapping the next one.
+
+These four are optional where font-size and radius are not. Many token
+systems stop at color and type, and a tokens file with no spacing tokens
+gets no spacing check rather than a refusal to run. Their findings join
+the same baseline, keyed by property and value (`"padding:13px"`).
+
 ## Wiring it into CI
 
 ```json
@@ -137,12 +166,18 @@ which is the shape of change a reviewer should ask about in a diff.
 - Which custom properties feed which ladder is decided by the property
   name in your tokens file: `text` or `font` for the font-size ladder,
   `radius` or `corner` for the radius ladder, `shadow` or `elev` for shadow
-  tokens. A tokens file that names things differently needs no code
-  change, just token names the gate can read.
+  tokens, and the names in the table above for the four optional
+  ladders. A tokens file that names things differently needs no code
+  change, just token names the gate can read. An optional ladder whose
+  tokens are missing is skipped without a word, so a typo in a spacing
+  token name turns the spacing check off.
 - The radius and font-size rules flag values that fall *off* the ladder,
   not every hand-typed value that happens to match one on it. A `14px`
   that equals an existing token is still not a `var()`, and this gate will
   not tell you that.
+- Lengths are compared in `px` only. A `1.5rem` padding or an `em`
+  breakpoint is not read, and neither is a duration or a media query
+  written in JavaScript (`matchMedia`, an animation library's options).
 - The hex rule matches six-digit hex colors only, and only the exact value
   of an existing token. `rgb()`, `hsl()`, three-digit hex, and colors that
   are close but not identical to a token all pass silently.

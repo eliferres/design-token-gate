@@ -24,6 +24,15 @@
  * convention, not a law of CSS - name your tokens accordingly, or the gate
  * has no ladder to check against and refuses to run half-blind (below).
  *
+ * RULE 3 (optional ladders). Spacing (margin, padding, gap), border and
+ * outline widths, transition and animation durations, and media-query
+ * widths are held to ladders read the same way: "space", "spacing", "gap"
+ * or "gutter" in the name for spacing; "border", "stroke" or "outline"
+ * without "radius" for line weights; "duration" or "delay" for durations
+ * (ms or s, compared in ms); "breakpoint", "screen" or "bp-" for media
+ * widths. Unlike rule 2 these are optional: a tokens file that declares no
+ * spacing tokens gets no spacing check, rather than a refusal.
+ *
  * ── The grandfather list ──
  * Older codebases have pre-rule debt: switching the gate on for a repo that
  * already hardcodes hundreds of values is how the gate never gets adopted.
@@ -141,6 +150,67 @@ if (!FONT_LADDER.size || !RADIUS_LADDER.size || !SHADOW_TOKENS.length) {
   process.exit(2);
 }
 
+// ── The optional ladders: spacing, border width, duration, breakpoint ──
+// Same contract as the two ladders above (values read from the tokens file
+// by property name, never retyped here), held as data so adding a group is
+// one more row. They are optional where font-size and radius are not:
+// plenty of token systems stop at color and type, and a gate that refused to
+// run on those would break every existing setup the day it upgraded. A group
+// whose tokens are absent is simply not checked.
+const SIDES = "(?:-(?:top|right|bottom|left|inline|block|inline-start|inline-end|block-start|block-end))?";
+const OPTIONAL_LADDERS = [
+  {
+    group: "spacing",
+    isToken: (name) => /space|spacing|gap|gutter/i.test(name),
+    unit: "px",
+    cssProp: new RegExp(`^(?:margin${SIDES}|padding${SIDES}|gap|row-gap|column-gap)$`, "i"),
+    jsProp: /^(?:margin|padding)(?:Top|Right|Bottom|Left|Inline|Block|InlineStart|InlineEnd|BlockStart|BlockEnd)?$|^(?:gap|rowGap|columnGap)$/,
+  },
+  {
+    group: "border",
+    // "--border-radius-card" is a corner, not a line weight.
+    isToken: (name) => /border|stroke|outline/i.test(name) && !/radius|corner/i.test(name),
+    unit: "px",
+    cssProp: /^(?:border(?:-(?:top|right|bottom|left))?(?:-width)?|outline(?:-width|-offset)?)$/i,
+    jsProp: /^(?:border(?:Top|Right|Bottom|Left)?Width|outlineWidth|outlineOffset)$/,
+  },
+  {
+    group: "duration",
+    isToken: (name) => /duration|delay/i.test(name),
+    unit: "ms",
+    cssProp: /^(?:transition|transition-duration|transition-delay|animation|animation-duration|animation-delay)$/i,
+    jsProp: null,
+  },
+  {
+    // Read from @media preludes rather than declarations; see scanBreakpoints.
+    group: "breakpoint",
+    isToken: (name) => /breakpoint|screen|\bbp-/i.test(name),
+    unit: "px",
+    cssProp: null,
+    jsProp: null,
+  },
+];
+
+// A duration ladder is kept in milliseconds so 0.3s and 300ms are one step.
+function toLadderUnit(num, unit, want) {
+  if (want === "px") return unit === "px" ? num : null;
+  if (unit === "ms") return num;
+  if (unit === "s") return num * 1000;
+  return null;
+}
+
+for (const ladder of OPTIONAL_LADDERS) {
+  ladder.values = new Map(); // number in ladder.unit -> token name
+  for (const m of tokensSrc.matchAll(/(--[a-z0-9-]+):\s*(\d*\.?\d+)(px|ms|s)\b/gi)) {
+    if (!ladder.isToken(m[1])) continue;
+    const v = toLadderUnit(parseFloat(m[2]), m[3].toLowerCase(), ladder.unit);
+    if (v !== null && !ladder.values.has(v)) ladder.values.set(v, m[1]);
+  }
+}
+const ACTIVE_LADDERS = OPTIONAL_LADDERS.filter((l) => l.values.size);
+const BREAKPOINTS = ACTIVE_LADDERS.find((l) => l.group === "breakpoint");
+const scaleText = (ladder) => `${ladder.group} scale: ${[...ladder.values.keys()].sort((a, b) => a - b).join("/")}${ladder.unit}`;
+
 function nearest(ladder, px) {
   let best = null;
   for (const [v, name] of ladder) {
@@ -179,6 +249,45 @@ function blankComments(src, isCss) {
 const lineOf = (src, idx) => src.slice(0, idx).split("\n").length;
 // A px literal is legal as the fallback half of var(--token, 13px).
 const isVarFallback = (value) => /var\(\s*--[a-z0-9-]+\s*,/i.test(value);
+// A length or time literal standing on its own, never the tail of a name
+// like translate3d or a hex digit run.
+const LITERAL = /(?<![\w.#-])(-?\d*\.?\d+)(px|ms|s)\b/gi;
+
+// Every literal in one CSS declaration checked against one optional ladder.
+// Zero passes in any unit, and the sign is ignored: a -8px pull is the 8px
+// step of the spacing scale.
+function checkLadderValue(ladder, prop, value, line, add) {
+  if (isVarFallback(value)) return;
+  for (const lit of value.matchAll(LITERAL)) {
+    const v = toLadderUnit(parseFloat(lit[1]), lit[2].toLowerCase(), ladder.unit);
+    if (v === null || v === 0 || ladder.values.has(Math.abs(v))) continue;
+    const [, token] = nearest(ladder.values, Math.abs(v));
+    add(`${prop}:${lit[0]}`, line, `off-scale ${prop} ${lit[0]} -> use var(${token}) (${scaleText(ladder)})`);
+  }
+}
+
+// Custom properties do not work inside a media query, so a breakpoint token
+// can only be honored by typing its value; the gate checks that the typed
+// width is one of them. A max-width one step under a breakpoint (767px or
+// 767.98px under 768px) is the usual way to end a range without overlap, so
+// it counts as that breakpoint.
+function scanBreakpoints(src, add) {
+  for (const media of src.matchAll(/@media\b[^{;]*/gi)) {
+    for (const cond of media[0].matchAll(/\([^()]*\)/g)) {
+      if (!/\bwidth\b/i.test(cond[0])) continue;
+      const isMax = /max-width|width\s*</i.test(cond[0]) || /px\s*>/i.test(cond[0]);
+      for (const lit of cond[0].matchAll(/(\d*\.?\d+)px\b/gi)) {
+        const v = parseFloat(lit[1]);
+        const onLadder = [...BREAKPOINTS.values.keys()].some(
+          (b) => b === v || (isMax && (b - v === 1 || Math.abs(b - v - 0.02) < 1e-9))
+        );
+        if (onLadder) continue;
+        const [, token] = nearest(BREAKPOINTS.values, v);
+        add(`breakpoint:${lit[0]}`, lineOf(src, media.index + cond.index), `off-scale breakpoint ${lit[0]} -> nearest token ${token} (${scaleText(BREAKPOINTS)})`);
+      }
+    }
+  }
+}
 
 function scanFile(file) {
   const rel = relPath(file);
@@ -229,6 +338,12 @@ function scanFile(file) {
       const norm = value.replace(/\s+/g, " ").toLowerCase();
       add(`box-shadow:${norm}`, lineOf(src, m.index), `raw shadow color -> use var(${SHADOW_TOKENS[0]})${SHADOW_TOKENS[1] ? ` / var(${SHADOW_TOKENS[1]})` : ""}`);
     }
+    for (const m of src.matchAll(/(^|[;{}\s])([a-z-]+)\s*:\s*([^;{}]+)/gi)) {
+      const prop = m[2].toLowerCase();
+      const ladder = ACTIVE_LADDERS.find((l) => l.cssProp?.test(prop));
+      if (ladder) checkLadderValue(ladder, prop, m[3].trim(), lineOf(src, m.index + m[1].length), add);
+    }
+    if (BREAKPOINTS) scanBreakpoints(src, add);
   } else {
     // Inline JS/TS object styles are the same bypass wearing camelCase.
     for (const m of src.matchAll(/\bfontSize\s*:\s*(?:"(\d+(?:\.\d+)?)px"|'(\d+(?:\.\d+)?)px'|(\d+(?:\.\d+)?))\s*[,}]/g)) {
@@ -249,6 +364,15 @@ function scanFile(file) {
       if (value === "none" || !/rgba?\(|#[0-9a-fA-F]{3,8}\b/.test(value)) continue;
       const norm = value.replace(/\s+/g, " ").toLowerCase();
       add(`boxShadow:${norm}`, lineOf(src, m.index), `raw inline shadow color -> use var(${SHADOW_TOKENS[0]})`);
+    }
+    for (const m of src.matchAll(/\b([a-zA-Z]+)\s*:\s*(?:"(-?\d+(?:\.\d+)?)px"|'(-?\d+(?:\.\d+)?)px'|(-?\d+(?:\.\d+)?))\s*[,}]/g)) {
+      const ladder = ACTIVE_LADDERS.find((l) => l.jsProp?.test(m[1]));
+      if (!ladder) continue;
+      const raw = m[2] ?? m[3] ?? m[4];
+      const v = Math.abs(parseFloat(raw));
+      if (v === 0 || ladder.values.has(v)) continue;
+      const [, token] = nearest(ladder.values, v);
+      add(`${m[1]}:${raw}`, lineOf(src, m.index), `off-scale inline ${m[1]} ${raw} -> use var(${token}) (${scaleText(ladder)})`);
     }
   }
   return found;

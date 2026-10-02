@@ -8,6 +8,11 @@
   (or `npx github:eliferres/design-token-gate`) puts `design-token-gate` on your
   PATH, and `design-token-gate --version` prints the version.
 
+- Spacing, border width, duration and breakpoint ladders, read from the
+  tokens file by name like the font-size and radius ladders. Each one is
+  checked only when the tokens file declares it, so an existing setup keeps
+  passing until you add the tokens.
+
 ### Changed
 
 - Exit 2 now means the gate could not run: a missing tokens file or scope

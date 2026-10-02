@@ -345,3 +345,90 @@ test("--freeze refusing to raise the ceiling stays exit 1: the gate ran and said
   });
   assert.equal(runGate(root, "--freeze").code, 1);
 });
+
+// ── The optional ladders: spacing, border width, duration, breakpoint ──
+// Each one is read from the tokens file by name, like the font-size and
+// radius ladders, and switches on only when the tokens file declares it.
+const MORE_TOKENS = `:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-4: 16px;
+  --border-thin: 1px;
+  --border-thick: 2px;
+  --duration-fast: 150ms;
+  --duration-slow: 0.3s;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+}
+`;
+
+function runWithMore(css, tsx = null) {
+  const root = makeTree({ css, tsx });
+  fs.appendFileSync(path.join(root, "tokens.css"), MORE_TOKENS);
+  return runGate(root);
+}
+
+test("off-scale margin, padding and gap are refused and name the nearest spacing token", () => {
+  const { code, out } = runWithMore(`.a { padding: 8px 13px; }\n.b { margin-top: -7px; }\n.c { gap: 16px; row-gap: 10px; }\n`);
+  assert.equal(code, 1);
+  assert.match(out, /probe\.css:1 off-scale padding 13px -> use var\(--space-4\)/);
+  assert.match(out, /probe\.css:2 off-scale margin-top -7px -> use var\(--space-2\)/);
+  assert.match(out, /probe\.css:3 off-scale row-gap 10px -> use var\(--space-2\)/);
+  assert.doesNotMatch(out, /gap 16px/);
+});
+
+test("spacing on the scale, zero, auto and var() pass", () => {
+  const { code } = runWithMore(`.a { padding: 8px 16px; margin: 0 auto; gap: var(--space-1, 5px); margin-left: -4px; }\n`);
+  assert.equal(code, 0);
+});
+
+test("border and outline widths are held to the border ladder, and a radius token never joins it", () => {
+  const root = makeTree({ css: `.a { border: 3px solid red; outline-width: 2px; border-top-width: 12px; }\n` });
+  fs.appendFileSync(path.join(root, "tokens.css"), MORE_TOKENS + ":root { --border-radius-pill: 12px; }\n");
+  const { code, out } = runGate(root);
+  assert.equal(code, 1);
+  assert.match(out, /off-scale border 3px -> use var\(--border-thick\)/);
+  assert.match(out, /off-scale border-top-width 12px/, "12px is a radius token, not a border width");
+  assert.doesNotMatch(out, /outline-width/);
+});
+
+test("durations are compared in milliseconds whether written in ms or s", () => {
+  const { code, out } = runWithMore(
+    `.a { transition: opacity 300ms ease, transform 0.15s ease; }\n.b { animation-duration: 250ms; }\n.c { transition-delay: 0s; }\n`
+  );
+  assert.equal(code, 1);
+  assert.match(out, /probe\.css:2 off-scale animation-duration 250ms -> use var\(--duration-slow\)/);
+  assert.doesNotMatch(out, /probe\.css:1 /);
+  assert.doesNotMatch(out, /probe\.css:3 /);
+});
+
+test("a media query width off the breakpoint ladder is refused; just below a breakpoint is a max-width edge", () => {
+  const { code, out } = runWithMore(
+    `@media (min-width: 768px) { .a { color: red; } }\n@media (max-width: 767px) { .b { color: red; } }\n@media (max-width: 1023.98px) { .c { color: red; } }\n@media (min-width: 900px) { .d { color: red; } }\n`
+  );
+  assert.equal(code, 1);
+  assert.match(out, /probe\.css:4 off-scale breakpoint 900px -> nearest token --breakpoint-lg/);
+  assert.equal((out.match(/off-scale breakpoint/g) ?? []).length, 1);
+});
+
+test("a tokens file with no spacing, border, duration or breakpoint tokens leaves those values alone", () => {
+  const root = makeTree({ css: `.a { padding: 13px; border: 3px solid red; transition: opacity 250ms; }\n@media (min-width: 900px) { .b { color: red; } }\n` });
+  assert.equal(runGate(root).code, 0);
+});
+
+test("inline padding, margin and border widths are checked in camelCase too", () => {
+  const { code, out } = runWithMore("", `export const A = () => <div style={{ padding: 13, marginTop: "8px", borderWidth: 3 }} />;\n`);
+  assert.equal(code, 1);
+  assert.match(out, /off-scale inline padding 13 -> use var\(--space-4\)/);
+  assert.match(out, /off-scale inline borderWidth 3 -> use var\(--border-thick\)/);
+  assert.doesNotMatch(out, /marginTop/);
+});
+
+test("an off-scale spacing value is grandfathered by the baseline like any other", () => {
+  const root = makeTree({
+    css: `.a { padding: 13px; }\n`,
+    baseline: { counts: { [PROBE_CSS]: { "padding:13px": 1 } } },
+  });
+  fs.appendFileSync(path.join(root, "tokens.css"), MORE_TOKENS);
+  assert.equal(runGate(root).code, 0);
+});
