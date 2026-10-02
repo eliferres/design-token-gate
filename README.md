@@ -89,8 +89,8 @@ the same naming rule as the font-size and radius ladders:
 | breakpoint | `breakpoint`, `screen`, `bp-` | the widths inside `@media` queries |
 
 ```text
-src/card.css:7 off-scale padding 13px -> use var(--space-4) (spacing scale: 4/8/16px)
-src/card.css:12 off-scale breakpoint 900px -> nearest token --breakpoint-lg (breakpoint scale: 768/1024px)
+src/card.css:1 off-scale padding 13px -> use var(--space-4) (spacing scale: 4/8/16px)
+src/card.css:2 off-scale breakpoint 900px -> nearest token --breakpoint-lg (breakpoint scale: 768/1024px)
 ```
 
 Zero passes in any unit, and a negative margin is read as its size, so
