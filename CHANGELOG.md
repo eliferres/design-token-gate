@@ -17,7 +17,8 @@
   the closing line, and none of them enter the baseline.
 - `--allow-file <glob>`, repeatable, skips whole files such as a token
   specimen page or a vendored embed. The report counts the skipped files and
-  names any pattern that matched nothing.
+  names any pattern that matched nothing; patterns that skip every file stop
+  the run with exit 2.
 
 ### Changed
 

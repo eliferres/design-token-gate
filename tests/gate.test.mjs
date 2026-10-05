@@ -477,7 +477,7 @@ test("a clean run with nothing vouched prints no vouch line", () => {
 
 // ── Allow-files: whole files that are not yours to hold to the tokens ──
 test("--allow-file skips a matching file and reports how many it skipped", () => {
-  const root = makeTree({ css: `.a { color: #1a1a2e; }\n`, extra: { "src/specimens/swatches.css": `.s { color: #1a1a2e; }\n` } });
+  const root = makeTree({ css: `.a { color: #1a1a2e; }\n`, extra: { "src/specimens/swatches.css": `.s { color: #1a1a2e; }\n`, "src/ok.css": `.o { color: red; }\n` } });
   const r = runGate(root, "--allow-file", "probe.css", "--allow-file", "specimens/**");
   assert.equal(r.code, 0);
   assert.match(r.out, /2 file\(s\) skipped by --allow-file/);
@@ -526,4 +526,13 @@ test("a letter-spacing or word-spacing token never joins the spacing ladder", ()
   const { code, out } = runGate(root);
   assert.equal(code, 1);
   assert.match(out, /off-scale padding 13px -> use var\(--space-2\)/);
+});
+
+test("an --allow-file glob that skips every file is a usage error, not a clean pass", () => {
+  for (const glob of ["*", "**", "*.css"]) {
+    const root = makeTree({ css: `.a { font-size: 13px; }\n`, extra: { "src/b/x.css": `.b { color: #1a1a2e; }\n` } });
+    const { code, out } = runGate(root, "--allow-file", glob);
+    assert.equal(code, 2, `--allow-file ${glob}`);
+    assert.match(out, /--allow-file left nothing to scan/);
+  }
 });

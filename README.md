@@ -140,11 +140,13 @@ node design-token-gate.mjs --tokens src/tokens.css --scope src --baseline design
   --allow-file "specimens/**" --allow-file print.css
 ```
 
-A glob with a slash is matched against the path under `--scope`; one
-without a slash matches the file name at any depth. `*` stays inside one
-directory, `**` crosses directories, `?` is one character. The report
-counts the skipped files, and a pattern that matches nothing is named on
-stderr, so a typo in an exception does not pass quietly.
+A glob with a slash is matched against the path under `--scope`, where
+`*` stays inside one directory, `**` crosses directories and `?` is one
+character. A glob without a slash is matched against the file name alone,
+at any depth, so `print.css` skips every file of that name and `*.css`
+would skip every stylesheet. The report counts the skipped files, a
+pattern that matches nothing is named on stderr, and patterns that leave
+nothing to scan stop the run with exit 2 rather than pass it.
 
 ## Wiring it into CI
 

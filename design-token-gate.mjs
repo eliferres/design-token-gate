@@ -287,6 +287,12 @@ const skippedByAllow = walkedFiles.length - scopedFiles.length;
 for (const rule of allowRules) {
   if (!rule.hits) console.error(`design-token-gate: --allow-file "${rule.glob}" matched no file under ${args.scope}`);
 }
+// A glob broad enough to skip every file would turn the gate into a
+// permanent pass, so that is a configuration error, not a clean run.
+if (skippedByAllow && !scopedFiles.length) {
+  console.error(`design-token-gate: --allow-file left nothing to scan under ${args.scope} - every file matched a pattern`);
+  process.exit(2);
+}
 
 // ── Scanning: comments are blanked (not deleted) before matching, for both
 // rules, so a commented-out declaration never trips the gate and every line
