@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.0] - 2026-10-02
+## [1.1.0] - 2026-10-04
 
 ### Added
 
@@ -39,6 +39,12 @@
 - `--scope` pointed at a project root no longer reports violations in vendored
   or generated code: `node_modules`, `.git`, `dist`, `build`, `coverage` and
   `.next` are never scanned.
+- A var() fallback in a font-size, border-radius or box-shadow no longer
+  hides the rest of the declaration: in `border-radius: var(--r, 4px) 7px`
+  the 7px is checked, and a raw shadow color listed after a var() is
+  reported. Only the fallback inside var() stays exempt.
+- A font-size with several px values, such as `clamp(14px, 2vw, 18px)`,
+  checks each one instead of only the first.
 
 ## [1.0.0](https://github.com/eliferres/design-token-gate/releases/tag/v1.0.0) - 2026-09-03
 
