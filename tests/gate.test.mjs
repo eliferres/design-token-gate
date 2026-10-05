@@ -507,3 +507,15 @@ test("--allow-file with no pattern is a usage error", () => {
   const root = makeTree({ css: "" });
   assert.equal(runGate(root, "--allow-file").code, 2);
 });
+
+test("an unindented declaration reports its own line, and a vouch on it applies", () => {
+  const css = `.a {\nfont-size: 13px;\nborder-radius: 10px;\nbox-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);\n}\n`;
+  const { code, out } = runGate(makeTree({ css }));
+  assert.equal(code, 1);
+  assert.match(out, /probe\.css:2 raw font-size 13px/);
+  assert.match(out, /probe\.css:3 off-ladder border-radius 10px/);
+  assert.match(out, /probe\.css:4 raw shadow color/);
+
+  const vouched = css.replace(/;\n/g, "; /* token-vouch: print sheet */\n");
+  assert.equal(runGate(makeTree({ css: vouched })).code, 0);
+});

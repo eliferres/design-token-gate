@@ -28,6 +28,8 @@
 
 ### Fixed
 
+- A font-size, border-radius or box-shadow declaration at the start of a line
+  was reported one line too early.
 - The demo picture no longer cuts its long lines off at the right edge: rows
   wider than the box ran past it mid-word with no ellipsis. Only the drawing
   changed; the recorded session is untouched.

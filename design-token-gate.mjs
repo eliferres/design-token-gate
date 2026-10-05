@@ -393,7 +393,7 @@ function scanFile(file) {
       if (!px) continue;
       if (FONT_LADDER.has(parseFloat(px[1]))) continue;
       const [, token] = nearest(FONT_LADDER, parseFloat(px[1]));
-      add(`font-size:${px[1]}px`, lineOf(src, m.index), `raw font-size ${px[1]}px -> use var(${token}) (the font-size ladder)`);
+      add(`font-size:${px[1]}px`, lineOf(src, m.index + m[1].length), `raw font-size ${px[1]}px -> use var(${token}) (the font-size ladder)`);
     }
     for (const m of src.matchAll(/(^|[;{}\s])(border(?:-(?:top|bottom)-(?:left|right))?-radius)\s*:\s*([^;}]+)/gi)) {
       const prop = m[2];
@@ -403,7 +403,7 @@ function scanFile(file) {
         const v = parseFloat(p[1]);
         if (v === 0 || RADIUS_LADDER.has(v)) continue;
         const [, token] = nearest(RADIUS_LADDER, v);
-        add(`${prop.toLowerCase()}:${p[1]}px`, lineOf(src, m.index), `off-ladder ${prop} ${p[1]}px -> use var(${token}) (ladder: ${[...RADIUS_LADDER.keys()].sort((a, b) => a - b).join("/")})`);
+        add(`${prop.toLowerCase()}:${p[1]}px`, lineOf(src, m.index + m[1].length), `off-ladder ${prop} ${p[1]}px -> use var(${token}) (ladder: ${[...RADIUS_LADDER.keys()].sort((a, b) => a - b).join("/")})`);
       }
     }
     for (const m of src.matchAll(/(^|[;{}\s])box-shadow\s*:\s*([^;}]+)/gi)) {
@@ -411,7 +411,7 @@ function scanFile(file) {
       if (value === "none" || isVarFallback(value)) continue;
       if (!/rgba?\(|#[0-9a-fA-F]{3,8}\b/.test(value)) continue;
       const norm = value.replace(/\s+/g, " ").toLowerCase();
-      add(`box-shadow:${norm}`, lineOf(src, m.index), `raw shadow color -> use var(${SHADOW_TOKENS[0]})${SHADOW_TOKENS[1] ? ` / var(${SHADOW_TOKENS[1]})` : ""}`);
+      add(`box-shadow:${norm}`, lineOf(src, m.index + m[1].length), `raw shadow color -> use var(${SHADOW_TOKENS[0]})${SHADOW_TOKENS[1] ? ` / var(${SHADOW_TOKENS[1]})` : ""}`);
     }
     for (const m of src.matchAll(/(^|[;{}\s])([a-z-]+)\s*:\s*([^;{}]+)/gi)) {
       const prop = m[2].toLowerCase();
