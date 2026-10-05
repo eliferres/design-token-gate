@@ -569,6 +569,13 @@ test("font-size, border-radius and box-shadow check the literals beside a var() 
   assert.equal(runGate(makeTree({ css: tokenOnly })).code, 0);
 });
 
+test("a font-size with several px values checks every one, not just the first", () => {
+  const { code, out } = runGate(makeTree({ css: `.a { font-size: clamp(12px, 2vw, 18px); }\n` }));
+  assert.equal(code, 1);
+  assert.match(out, /probe\.css:1 raw font-size 18px -> use var\(--text-base\)/);
+  assert.doesNotMatch(out, /font-size 12px/);
+});
+
 test("the optional ladders in use are named, and one whose tokens cannot be read says so", () => {
   const remRoot = makeTree({ css: `.a { padding: 13px; }\n` });
   fs.appendFileSync(path.join(remRoot, "tokens.css"), ":root { --space-1: 0.25rem; --space-2: 0.5rem; --duration-fast: 150ms; }\n");

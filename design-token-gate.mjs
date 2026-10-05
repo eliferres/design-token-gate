@@ -425,11 +425,11 @@ function scanFile(file) {
   // ── Rule 2: the two ladders + the shadow tokens ──
   if (isCss) {
     for (const m of src.matchAll(/(^|[;{}\s])font-size\s*:\s*([^;}]+)/gi)) {
-      const px = outsideVar(m[2]).match(/(\d+(?:\.\d+)?)px/);
-      if (!px) continue;
-      if (FONT_LADDER.has(parseFloat(px[1]))) continue;
-      const [, token] = nearest(FONT_LADDER, parseFloat(px[1]));
-      add(`font-size:${px[1]}px`, lineOf(src, m.index + m[1].length), `raw font-size ${px[1]}px -> use var(${token}) (the font-size ladder)`);
+      for (const px of outsideVar(m[2]).matchAll(/(\d+(?:\.\d+)?)px/g)) {
+        if (FONT_LADDER.has(parseFloat(px[1]))) continue;
+        const [, token] = nearest(FONT_LADDER, parseFloat(px[1]));
+        add(`font-size:${px[1]}px`, lineOf(src, m.index + m[1].length), `raw font-size ${px[1]}px -> use var(${token}) (the font-size ladder)`);
+      }
     }
     for (const m of src.matchAll(/(^|[;{}\s])(border(?:-(?:top|bottom)-(?:left|right))?-radius)\s*:\s*([^;}]+)/gi)) {
       const prop = m[2];
