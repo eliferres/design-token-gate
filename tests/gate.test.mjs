@@ -536,3 +536,10 @@ test("an --allow-file glob that skips every file is a usage error, not a clean p
     assert.match(out, /--allow-file left nothing to scan/);
   }
 });
+
+test("a var() fallback hides only itself: the literals beside it are still checked", () => {
+  const { code, out } = runWithMore(`.a { margin: var(--space-1, 4px) 7px; }\n.b { padding: var(--space-2, var(--space-1, 5px)) 8px; }\n`);
+  assert.equal(code, 1);
+  assert.match(out, /probe\.css:1 off-scale margin 7px/);
+  assert.doesNotMatch(out, /4px|5px|probe\.css:2/);
+});

@@ -310,12 +310,33 @@ const isVarFallback = (value) => /var\(\s*--[a-z0-9-]+\s*,/i.test(value);
 // like translate3d or a hex digit run.
 const LITERAL = /(?<![\w.#-])(-?\d*\.?\d+)(px|ms|s)\b/gi;
 
+// A value with every var(...) call blanked out, nested ones included, so a
+// fallback inside var() is legal while a literal beside it is still read:
+// in "var(--space-1, 4px) 7px" only the 7px is the author's own typing.
+function outsideVar(value) {
+  let out = "";
+  for (let i = 0; i < value.length; i++) {
+    if (!/^var\(/i.test(value.slice(i, i + 4))) {
+      out += value[i];
+      continue;
+    }
+    let depth = 0;
+    let j = i + 3;
+    for (; j < value.length; j++) {
+      if (value[j] === "(") depth++;
+      else if (value[j] === ")" && --depth === 0) break;
+    }
+    out += " ";
+    i = j;
+  }
+  return out;
+}
+
 // Every literal in one CSS declaration checked against one optional ladder.
 // Zero passes in any unit, and the sign is ignored: a -8px pull is the 8px
 // step of the spacing scale.
 function checkLadderValue(ladder, prop, value, line, add) {
-  if (isVarFallback(value)) return;
-  for (const lit of value.matchAll(LITERAL)) {
+  for (const lit of outsideVar(value).matchAll(LITERAL)) {
     const v = toLadderUnit(parseFloat(lit[1]), lit[2].toLowerCase(), ladder.unit);
     if (v === null || v === 0 || ladder.values.has(Math.abs(v))) continue;
     const [, token] = nearest(ladder.values, Math.abs(v));
