@@ -1,7 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 352" role="img" aria-labelledby="t d" font-family="SF Mono, Menlo, Consolas, monospace" font-size="16">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 352" role="img" aria-labelledby="t d" font-family="SF Mono, Menlo, Consolas, monospace" font-size="16" xml:space="preserve">
   <title id="t">design-token-gate demo terminal</title>
   <desc id="d">Terminal session showing design-token-gate refusing a source file with a raw hex, an off-ladder radius, and a raw shadow color, then passing the same file rewritten to use var().</desc>
   <style>
+    text { white-space: pre; }
     .p { fill: #7ee2a8; }
     .cmd { fill: #e8eef5; }
     .dim { fill: #9fb0c0; }
