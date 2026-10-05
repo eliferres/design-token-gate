@@ -11,7 +11,9 @@
 - Spacing, border width, duration and breakpoint ladders, read from the
   tokens file by name like the font-size and radius ladders. Each one is
   checked only when the tokens file declares it, so an existing setup keeps
-  passing until you add the tokens.
+  passing until you add the tokens. Each run names the optional ladders its
+  tokens file mentions, on or off, so a scale written in `rem` is reported
+  as off instead of passing in silence.
 - A `/* token-vouch: <reason> */` comment accepts the hand-typed values on its
   own line. Each one is listed in the report with its reason and counted in
   the closing line, and none of them enter the baseline.

@@ -218,6 +218,18 @@ for (const ladder of OPTIONAL_LADDERS) {
   }
 }
 const ACTIVE_LADDERS = OPTIONAL_LADDERS.filter((l) => l.values.size);
+
+// An optional ladder whose tokens exist but are written in a unit the gate
+// does not read (a 0.5rem spacing scale) would otherwise switch its check
+// off without a word. Name every optional ladder the tokens file mentions,
+// on or off; a file that mentions none prints nothing extra.
+const tokenNames = [...tokensSrc.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map((m) => m[1]);
+const ladderStates = OPTIONAL_LADDERS.flatMap((l) => {
+  if (l.values.size) return [`${l.group} on`];
+  if (tokenNames.some(l.isToken)) return [`${l.group} off (its tokens are not in ${l.unit === "ms" ? "ms or s" : "px"})`];
+  return [];
+});
+if (ladderStates.length) console.log(`design-token-gate: optional ladders: ${ladderStates.join("; ")}`);
 const BREAKPOINTS = ACTIVE_LADDERS.find((l) => l.group === "breakpoint");
 const scaleText = (ladder) => `${ladder.group} scale: ${[...ladder.values.keys()].sort((a, b) => a - b).join("/")}${ladder.unit}`;
 

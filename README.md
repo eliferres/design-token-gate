@@ -89,6 +89,8 @@ the same naming rule as the font-size and radius ladders:
 | breakpoint | `breakpoint`, `screen`, `bp-` | the widths inside `@media` queries |
 
 ```text
+design-token-gate: optional ladders: spacing on; breakpoint on
+...
 src/card.css:1 off-scale padding 13px -> use var(--space-4) (spacing scale: 4/8/16px)
 src/card.css:2 off-scale breakpoint 900px -> nearest token --breakpoint-lg (breakpoint scale: 768/1024px)
 ```
@@ -100,7 +102,10 @@ the typed width is one of them, and accepts a `max-width` one step under
 a breakpoint (`767px` or `767.98px` under a 768px token), the usual way
 to end a range without overlapping the next one.
 
-These four are optional where font-size and radius are not. Many token
+Every run that finds any of these tokens names the optional ladders on
+its first line, for example `optional ladders: spacing on; breakpoint on`,
+and says `off` for one whose tokens are written in a unit it does not
+read. These four are optional where font-size and radius are not. Many token
 systems stop at color and type, and a tokens file with no spacing tokens
 gets no spacing check rather than a refusal to run. Their findings join
 the same baseline, keyed by property and value (`"padding:13px"`).
@@ -118,6 +123,7 @@ print stylesheet, an email template that cannot load your tokens. Put a
 The value passes, and the report says so with the reason attached:
 
 ```text
+design-token-gate: optional ladders: spacing on; breakpoint on
 design-token-gate: 1 hand-typed value(s) vouched for:
   vouched: src/embed.css:1 off-scale padding 13px -> use var(--space-4) (spacing scale: 4/8/16px) - matches the payment widget's own frame
 design-token-gate: clean - every token value flows from src/tokens.css (0 grandfathered violation(s) still owed, 1 hand-typed value(s) vouched for).
@@ -211,9 +217,10 @@ which is the shape of change a reviewer should ask about in a diff.
   `radius` or `corner` for the radius ladder, `shadow` or `elev` for shadow
   tokens, and the names in the table above for the four optional
   ladders. A tokens file that names things differently needs no code
-  change, just token names the gate can read. An optional ladder whose
-  tokens are missing is skipped without a word, so a typo in a spacing
-  token name turns the spacing check off.
+  change, just token names the gate can read. Each run names the
+  optional ladders it found, on or off: a spacing scale written in `rem`
+  prints `spacing off (its tokens are not in px)`. A ladder whose token
+  names are missing altogether, a typo included, is not mentioned.
 - The radius and font-size rules flag values that fall *off* the ladder,
   not every hand-typed value that happens to match one on it. A `14px`
   that equals an existing token is still not a `var()`, and this gate will

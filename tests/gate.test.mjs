@@ -543,3 +543,13 @@ test("a var() fallback hides only itself: the literals beside it are still check
   assert.match(out, /probe\.css:1 off-scale margin 7px/);
   assert.doesNotMatch(out, /4px|5px|probe\.css:2/);
 });
+
+test("the optional ladders in use are named, and one whose tokens cannot be read says so", () => {
+  const remRoot = makeTree({ css: `.a { padding: 13px; }\n` });
+  fs.appendFileSync(path.join(remRoot, "tokens.css"), ":root { --space-1: 0.25rem; --space-2: 0.5rem; --duration-fast: 150ms; }\n");
+  const rem = runGate(remRoot);
+  assert.match(rem.out, /optional ladders: spacing off \(its tokens are not in px\); duration on/);
+
+  const none = runGate(makeTree({ css: `.a { color: red; }\n` }));
+  assert.doesNotMatch(none.out, /optional ladders/, "a tokens file with no optional groups prints nothing extra");
+});
