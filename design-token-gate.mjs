@@ -181,8 +181,8 @@ const OPTIONAL_LADDERS = [
     // "--border-radius-card" is a corner, not a line weight.
     isToken: (name) => /border|stroke|outline/i.test(name) && !/radius|corner/i.test(name),
     unit: "px",
-    cssProp: /^(?:border(?:-(?:top|right|bottom|left))?(?:-width)?|outline(?:-width|-offset)?)$/i,
-    jsProp: /^(?:border(?:Top|Right|Bottom|Left)?Width|outlineWidth|outlineOffset)$/,
+    cssProp: new RegExp(`^(?:border${SIDES}(?:-width)?|outline(?:-width|-offset)?)$`, "i"),
+    jsProp: /^(?:border(?:Top|Right|Bottom|Left|Inline|Block|InlineStart|InlineEnd|BlockStart|BlockEnd)?Width|outlineWidth|outlineOffset)$/,
   },
   {
     group: "duration",
@@ -480,14 +480,19 @@ function scanFile(file) {
       const norm = value.replace(/\s+/g, " ").toLowerCase();
       add(`boxShadow:${norm}`, lineOf(src, m.index), `raw inline shadow color -> use var(${SHADOW_TOKENS[0]})`);
     }
-    for (const m of src.matchAll(/\b([a-zA-Z]+)\s*:\s*(?:"(-?\d+(?:\.\d+)?)px"|'(-?\d+(?:\.\d+)?)px'|(-?\d+(?:\.\d+)?))\s*[,}]/g)) {
+    // A bare number is px in a React style object; a string can hold several
+    // values ("4px 7px") and var() fallbacks, read the same way as CSS.
+    for (const m of src.matchAll(/\b([a-zA-Z]+)\s*:\s*(?:"([^"\n]*)"|'([^'\n]*)'|(-?\d+(?:\.\d+)?))\s*[,}]/g)) {
       const ladder = ACTIVE_LADDERS.find((l) => l.jsProp?.test(m[1]));
       if (!ladder) continue;
-      const raw = m[2] ?? m[3] ?? m[4];
-      const v = Math.abs(parseFloat(raw));
-      if (v === 0 || ladder.values.has(v)) continue;
-      const [, token] = nearest(ladder.values, v);
-      add(`${m[1]}:${raw}`, lineOf(src, m.index), `off-scale inline ${m[1]} ${raw} -> use var(${token}) (${scaleText(ladder)})`);
+      const raws = m[4] !== undefined ? [m[4]] : [...outsideVar(m[2] ?? m[3]).matchAll(/(?<![\w.#-])(-?\d*\.?\d+)px\b/g)].map((p) => p[1]);
+      for (const raw of raws) {
+        const v = Math.abs(parseFloat(raw));
+        if (v === 0 || ladder.values.has(v)) continue;
+        const [, token] = nearest(ladder.values, v);
+        const shown = m[4] !== undefined ? raw : `${raw}px`;
+        add(`${m[1]}:${shown}`, lineOf(src, m.index), `off-scale inline ${m[1]} ${shown} -> use var(${token}) (${scaleText(ladder)})`);
+      }
     }
   }
   return found;
@@ -539,7 +544,7 @@ if (args.freeze) {
   }
   const total = allHits.length;
   writeFileSync(BASELINE_FILE, JSON.stringify({
-    law: "Frozen grandfather list for the design-token gate (rule 1's raw hex values and rule 2's font-size ladder, radius ladder, shadow tokens). Counts only go down.",
+    about: "Frozen grandfather list for the design-token gate (rule 1's raw hex values and rule 2's font-size ladder, radius ladder, shadow tokens). Counts only go down.",
     rule: "Keyed by file -> offending value -> count. Line numbers are deliberately absent: moving a declaration must not fail the build, adding another one must.",
     refreeze: "node design-token-gate.mjs --tokens ... --scope ... --freeze (after removing violations)",
     total,

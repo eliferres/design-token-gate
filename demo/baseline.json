@@ -1,5 +1,5 @@
 {
-  "law": "Frozen grandfather list for the design-token gate's rule 2 (font-size ladder, radius ladder, shadow tokens). Counts only go down.",
+  "about": "Frozen grandfather list for the design-token gate (rule 1's raw hex values and rule 2's font-size ladder, radius ladder, shadow tokens). Counts only go down.",
   "rule": "Keyed by file -> offending value -> count. Line numbers are deliberately absent: moving a declaration must not fail the build, adding another one must.",
   "refreeze": "node design-token-gate.mjs --tokens ... --scope ... --freeze (after removing violations)",
   "total": 0,

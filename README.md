@@ -83,8 +83,8 @@ the same naming rule as the font-size and radius ladders:
 
 | Ladder | Token names containing | Checked in |
 | --- | --- | --- |
-| spacing | `space`, `spacing`, `gap`, `gutter` (never `letter-spacing` or `word-spacing`) | `margin`, `padding`, `gap`, `row-gap`, `column-gap` and their side and logical longhands; inline `padding`, `margin`, `gap` |
-| border | `border`, `stroke`, `outline` (never with `radius` or `corner`) | `border`, `border-*-width`, `outline`, `outline-width`, `outline-offset`; inline `borderWidth`, `outlineWidth` |
+| spacing | `space`, `spacing`, `gap`, `gutter` (never `letter-spacing` or `word-spacing`) | `margin`, `padding`, `gap`, `row-gap`, `column-gap` and their side and logical longhands; inline `padding`, `margin`, `gap` and their longhands, as a number or a string of several values |
+| border | `border`, `stroke`, `outline` (never with `radius` or `corner`) | `border` and its side and logical forms with or without `-width`, `outline`, `outline-width`, `outline-offset`; inline `borderWidth` and its side and logical forms, `outlineWidth`, `outlineOffset` |
 | duration | `duration`, `delay` | `transition`, `animation` and their `-duration` and `-delay` longhands, `ms` and `s` compared in milliseconds |
 | breakpoint | `breakpoint`, `screen`, `bp-` | the widths inside `@media` queries |
 
@@ -205,9 +205,13 @@ which is the shape of change a reviewer should ask about in a diff.
 
 ## Limitations
 
-- Static analysis only, over CSS files and inline `style={{ }}` objects in
-  JS/TS/JSX/TSX. Nothing is rendered, no computed styles, no CSS-in-JS
-  template literals, no Sass or Less variables.
+- Static analysis only, over CSS files and object literals in
+  JS/TS/JSX/TSX. In a script the gate reads any object key named like a
+  style property (`fontSize`, `padding`, `borderWidth`), so a non-style
+  object such as a chart config with `padding: 13` is read too; vouch for
+  that line or skip the file with `--allow-file`. Nothing is rendered, no
+  computed styles, no CSS-in-JS template literals, no Sass or Less
+  variables.
 - The walker never descends into `node_modules`, `.git`, `dist`, `build`,
   `coverage`, or `.next`, so pointing `--scope` at a project root grades
   your source and not your dependencies or your build output. That list is

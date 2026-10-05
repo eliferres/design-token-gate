@@ -553,3 +553,28 @@ test("the optional ladders in use are named, and one whose tokens cannot be read
   const none = runGate(makeTree({ css: `.a { color: red; }\n` }));
   assert.doesNotMatch(none.out, /optional ladders/, "a tokens file with no optional groups prints nothing extra");
 });
+
+test("logical border widths are held to the border ladder", () => {
+  const { code, out } = runWithMore(`.a { border-inline-width: 3px; border-block-start: 5px solid red; }\n`);
+  assert.equal(code, 1);
+  assert.match(out, /off-scale border-inline-width 3px/);
+  assert.match(out, /off-scale border-block-start 5px/);
+});
+
+test("an inline spacing string with several values checks each one", () => {
+  const { code, out } = runWithMore("", `export const A = () => <div style={{ margin: "4px 7px", padding: "var(--space-1, 5px) 8px" }} />;\n`);
+  assert.equal(code, 1);
+  assert.match(out, /off-scale inline margin 7px/);
+  assert.doesNotMatch(out, /4px|5px|padding/);
+});
+
+test("a frozen baseline describes itself with a plain key, and an older baseline still loads", () => {
+  const root = makeTree({ css: `.a { font-size: 13px; }\n`, baseline: null });
+  assert.equal(runGate(root, "--freeze").code, 0);
+  const written = JSON.parse(fs.readFileSync(path.join(root, "baseline.json"), "utf8"));
+  assert.ok(written.about, "the description lives under 'about'");
+  assert.equal(written.law, undefined);
+
+  const old = makeTree({ css: `.a { font-size: 13px; }\n`, baseline: { law: "older description", counts: { [PROBE_CSS]: { "font-size:13px": 1 } } } });
+  assert.equal(runGate(old).code, 0);
+});
