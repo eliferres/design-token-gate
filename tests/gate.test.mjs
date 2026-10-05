@@ -519,3 +519,11 @@ test("an unindented declaration reports its own line, and a vouch on it applies"
   const vouched = css.replace(/;\n/g, "; /* token-vouch: print sheet */\n");
   assert.equal(runGate(makeTree({ css: vouched })).code, 0);
 });
+
+test("a letter-spacing or word-spacing token never joins the spacing ladder", () => {
+  const root = makeTree({ css: `.a { padding: 13px; }\n` });
+  fs.appendFileSync(path.join(root, "tokens.css"), ":root { --space-2: 8px; --letter-spacing-wide: 13px; --word-spacing-loose: 13px; }\n");
+  const { code, out } = runGate(root);
+  assert.equal(code, 1);
+  assert.match(out, /off-scale padding 13px -> use var\(--space-2\)/);
+});

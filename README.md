@@ -83,7 +83,7 @@ the same naming rule as the font-size and radius ladders:
 
 | Ladder | Token names containing | Checked in |
 | --- | --- | --- |
-| spacing | `space`, `spacing`, `gap`, `gutter` | `margin`, `padding`, `gap`, `row-gap`, `column-gap` and their side and logical longhands; inline `padding`, `margin`, `gap` |
+| spacing | `space`, `spacing`, `gap`, `gutter` (never `letter-spacing` or `word-spacing`) | `margin`, `padding`, `gap`, `row-gap`, `column-gap` and their side and logical longhands; inline `padding`, `margin`, `gap` |
 | border | `border`, `stroke`, `outline` (never with `radius` or `corner`) | `border`, `border-*-width`, `outline`, `outline-width`, `outline-offset`; inline `borderWidth`, `outlineWidth` |
 | duration | `duration`, `delay` | `transition`, `animation` and their `-duration` and `-delay` longhands, `ms` and `s` compared in milliseconds |
 | breakpoint | `breakpoint`, `screen`, `bp-` | the widths inside `@media` queries |

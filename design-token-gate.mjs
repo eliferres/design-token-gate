@@ -170,7 +170,8 @@ const SIDES = "(?:-(?:top|right|bottom|left|inline|block|inline-start|inline-end
 const OPTIONAL_LADDERS = [
   {
     group: "spacing",
-    isToken: (name) => /space|spacing|gap|gutter/i.test(name),
+    // "--letter-spacing-wide" is type tracking, not layout space.
+    isToken: (name) => /space|spacing|gap|gutter/i.test(name) && !/letter-spacing|word-spacing/i.test(name),
     unit: "px",
     cssProp: new RegExp(`^(?:margin${SIDES}|padding${SIDES}|gap|row-gap|column-gap)$`, "i"),
     jsProp: /^(?:margin|padding)(?:Top|Right|Bottom|Left|Inline|Block|InlineStart|InlineEnd|BlockStart|BlockEnd)?$|^(?:gap|rowGap|columnGap)$/,
