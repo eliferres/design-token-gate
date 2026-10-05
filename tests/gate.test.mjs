@@ -544,6 +544,31 @@ test("a var() fallback hides only itself: the literals beside it are still check
   assert.doesNotMatch(out, /4px|5px|probe\.css:2/);
 });
 
+test("font-size, border-radius and box-shadow check the literals beside a var() fallback too", () => {
+  const css = [
+    ".a { border-radius: var(--radius-control, 4px) 7px; }",
+    ".b { border-radius: 5px var(--r, 4px); }",
+    ".c { font-size: max(13px, var(--text-sm, 14px)); }",
+    ".d { box-shadow: var(--shadow-card, none), 0 2px 4px rgba(0,0,0,.5); }",
+    "",
+  ].join("\n");
+  const { code, out } = runGate(makeTree({ css }));
+  assert.equal(code, 1);
+  assert.match(out, /probe\.css:1 off-ladder border-radius 7px/);
+  assert.match(out, /probe\.css:2 off-ladder border-radius 5px/);
+  assert.match(out, /probe\.css:3 raw font-size 13px/);
+  assert.match(out, /probe\.css:4 raw shadow color/);
+  assert.doesNotMatch(out, /4px ->|14px ->/, "the fallback inside var() stays exempt");
+
+  const tokenOnly = [
+    ".a { font-size: var(--text-sm); border-radius: var(--r); box-shadow: var(--shadow-card); }",
+    ".b { font-size: var(--text-sm, 14px); border-radius: var(--r, 4px); box-shadow: var(--shadow-card, 0 1px 2px rgba(0,0,0,.2)); }",
+    ".c { font-size: calc(var(--a) * 2); border-radius: calc(var(--a) * 2); }",
+    "",
+  ].join("\n");
+  assert.equal(runGate(makeTree({ css: tokenOnly })).code, 0);
+});
+
 test("the optional ladders in use are named, and one whose tokens cannot be read says so", () => {
   const remRoot = makeTree({ css: `.a { padding: 13px; }\n` });
   fs.appendFileSync(path.join(remRoot, "tokens.css"), ":root { --space-1: 0.25rem; --space-2: 0.5rem; --duration-fast: 150ms; }\n");

@@ -316,8 +316,6 @@ function blankComments(src, isCss) {
 }
 
 const lineOf = (src, idx) => src.slice(0, idx).split("\n").length;
-// A px literal is legal as the fallback half of var(--token, 13px).
-const isVarFallback = (value) => /var\(\s*--[a-z0-9-]+\s*,/i.test(value);
 // A length or time literal standing on its own, never the tail of a name
 // like translate3d or a hex digit run.
 const LITERAL = /(?<![\w.#-])(-?\d*\.?\d+)(px|ms|s)\b/gi;
@@ -427,9 +425,7 @@ function scanFile(file) {
   // ── Rule 2: the two ladders + the shadow tokens ──
   if (isCss) {
     for (const m of src.matchAll(/(^|[;{}\s])font-size\s*:\s*([^;}]+)/gi)) {
-      const value = m[2].trim();
-      if (isVarFallback(value)) continue;
-      const px = value.match(/(\d+(?:\.\d+)?)px/);
+      const px = outsideVar(m[2]).match(/(\d+(?:\.\d+)?)px/);
       if (!px) continue;
       if (FONT_LADDER.has(parseFloat(px[1]))) continue;
       const [, token] = nearest(FONT_LADDER, parseFloat(px[1]));
@@ -437,9 +433,7 @@ function scanFile(file) {
     }
     for (const m of src.matchAll(/(^|[;{}\s])(border(?:-(?:top|bottom)-(?:left|right))?-radius)\s*:\s*([^;}]+)/gi)) {
       const prop = m[2];
-      const value = m[3].trim();
-      if (isVarFallback(value)) continue;
-      for (const p of value.matchAll(/(\d+(?:\.\d+)?)px/g)) {
+      for (const p of outsideVar(m[3]).matchAll(/(\d+(?:\.\d+)?)px/g)) {
         const v = parseFloat(p[1]);
         if (v === 0 || RADIUS_LADDER.has(v)) continue;
         const [, token] = nearest(RADIUS_LADDER, v);
@@ -448,8 +442,7 @@ function scanFile(file) {
     }
     for (const m of src.matchAll(/(^|[;{}\s])box-shadow\s*:\s*([^;}]+)/gi)) {
       const value = m[2].trim();
-      if (value === "none" || isVarFallback(value)) continue;
-      if (!/rgba?\(|#[0-9a-fA-F]{3,8}\b/.test(value)) continue;
+      if (!/rgba?\(|#[0-9a-fA-F]{3,8}\b/.test(outsideVar(value))) continue;
       const norm = value.replace(/\s+/g, " ").toLowerCase();
       add(`box-shadow:${norm}`, lineOf(src, m.index + m[1].length), `raw shadow color -> use var(${SHADOW_TOKENS[0]})${SHADOW_TOKENS[1] ? ` / var(${SHADOW_TOKENS[1]})` : ""}`);
     }
