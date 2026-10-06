@@ -1,6 +1,6 @@
 # design-token-gate
 
-Every shipped screen draws its colors, type sizes, corners, and shadows from one tokens file, or the build fails. design-token-gate reads the ladders from your tokens.css, scans the source for hand-typed values that should have been a token, and holds a frozen list of old debt that can only shrink. Node 18+, no dependencies.
+design-token-gate fails the build when source code hand-types a color, type size, corner or shadow that should have been a token from your tokens.css. Node 18+, no dependencies.
 
 ![CI](https://github.com/eliferres/design-token-gate/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -8,6 +8,10 @@ Every shipped screen draws its colors, type sizes, corners, and shadows from one
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)
 
 <img src="demo/terminal.svg" width="660" alt="Terminal session showing design-token-gate refusing a source file with a raw hex, an off-ladder radius, and a raw shadow color, then passing the same file rewritten to use var().">
+
+## What it does
+
+Every shipped screen draws its colors, type sizes, corners, and shadows from one tokens file, or the build fails. design-token-gate reads the ladders from your tokens.css, scans the source for hand-typed values that should have been a token, and holds a frozen list of old debt that can only shrink.
 
 ## Install
 
