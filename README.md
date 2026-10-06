@@ -1,6 +1,6 @@
 # design-token-gate
 
-design-token-gate fails the build when source code hand-types a color, type size, corner or shadow that should have been a token from your tokens.css. Node 18+, no dependencies.
+design-token-gate fails the build when new code hand-types a color, type size, corner or shadow that should have been a token from your tokens.css. Node 18+, no dependencies.
 
 ![CI](https://github.com/eliferres/design-token-gate/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
