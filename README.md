@@ -2,12 +2,14 @@
 
 design-token-gate fails the build when new code hand-types a color, type size, corner or shadow that should have been a token from your tokens.css. Node 18+, no dependencies.
 
-![CI](https://github.com/eliferres/design-token-gate/actions/workflows/ci.yml/badge.svg)
-![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
-![Node 18+](https://img.shields.io/badge/node-18%2B-blue.svg)
-![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)
+[![ci](https://github.com/eliferres/design-token-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/eliferres/design-token-gate/actions/workflows/ci.yml)
+![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![node 18+](https://img.shields.io/badge/node-18%2B-blue.svg)
+![dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)
 
 <img src="demo/terminal.svg" width="660" alt="Terminal session showing design-token-gate refusing a source file with a raw hex, an off-ladder radius, and a raw shadow color, then passing the same file rewritten to use var().">
+
+The [fde-agent-skills](https://github.com/eliferres/fde-agent-skills) library documents the working methods behind this tool and its sibling tools as agent skills.
 
 ## What it does
 
